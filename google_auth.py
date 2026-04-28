@@ -1,5 +1,17 @@
 import os
 import json
+import sys
+from types import ModuleType
+
+# --- HACK POUR ANDROID : MOCKING WSGIREF ---
+# google-auth-oauthlib importe wsgiref dès le début. 
+# Sur Android, wsgiref est absent, ce qui cause un crash à l'import.
+# On crée un module vide pour "tromper" la bibliothèque.
+if "wsgiref" not in sys.modules:
+    mock_wsgiref = ModuleType("wsgiref")
+    sys.modules["wsgiref"] = mock_wsgiref
+# -------------------------------------------
+
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
