@@ -1,0 +1,54 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install flet crewai crewai[tools] google-auth-oauthlib numpy python-dotenv
+
+      - name: Create .env file
+        run: |
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" > .env
+          echo "SERPER_API_KEY=${{ secrets.SERPER_API_KEY }}" >> .env
+
+      - name: Create client_secret.json
+        run: |
+          echo '${{ secrets.GOOGLE_CLIENT_SECRET }}' > client_secret.json
+
+      - name: Build APK
+        run: |
+          # On décode le keystore depuis le secret base64
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
+          
+          # Compilation avec signature
+          flet build apk \
+            --project-name "Cortex IA" \
+            --org com.adr28.cortexia \
+            --keystore release.jks \
+            --keystore-password "${{ secrets.KEYSTORE_PASSWORD }}" \
+            --key-alias "${{ secrets.KEY_ALIAS }}" \
+            --key-password "${{ secrets.KEY_PASSWORD }}"
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: cortex-ia-apk
+          path: build/apk/*.apk
