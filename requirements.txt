@@ -1,3 +1,7 @@
-flet>=0.21.0
-numpy>=1.24.0
-requests>=2.31.0
+flet
+numpy
+python-dotenv
+google-auth-oauthlib
+crewai
+crewai[tools]
+requests
