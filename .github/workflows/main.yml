@@ -40,12 +40,12 @@ jobs:
           
           # Compilation avec signature
           flet build apk \
-            --project-name: "Cortex IA" \
-            --org: com.adr28.cortexia \
-            --keystore: release.jks \
-            --keystore-password: "${{ secrets.KEYSTORE_PASSWORD }}" \
-            --key-alias- "${{ secrets.KEY_ALIAS }}" \
-            --key-password: "${{ secrets.KEY_PASSWORD }}"
+          --project-name: "Cortex IA" \
+          --org: com.adr28.cortexia \
+          --keystore: release.jks \
+          --keystore-password: "${{ secrets.KEYSTORE_PASSWORD }}" \
+          --key-alias- "${{ secrets.KEY_ALIAS }}" \
+          --key-password: "${{ secrets.KEY_PASSWORD }}"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
