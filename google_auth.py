@@ -13,36 +13,24 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive.file'
 ]
 
-def authenticate_google():
-    """
-    Gère le flux OAuth2 pour obtenir des credentials Google.
-    Retourne les credentials sous forme de dictionnaire pour stockage.
-    """
-    creds = None
-    token_file = 'token.json'
+def get_authorization_url():
+    """Génère l'URL d'autorisation Google."""
     client_secrets_file = 'client_secret.json'
-
-    # Vérification de la présence du fichier client_secret.json
     if not os.path.exists(client_secrets_file):
-        raise FileNotFoundError("Le fichier 'client_secret.json' est manquant. Veuillez le placer à la racine du projet.")
+        raise FileNotFoundError("Le fichier 'client_secret.json' est manquant.")
+    
+    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
+    auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
+    return auth_url
 
-    # On tente de charger des credentials existants
-    if os.path.exists(token_file):
-        creds = Credentials.from_authorized_user_file(token_file, SCOPES)
-
-    # Si pas de credentials valides, on lance le flux d'authentification
-    if not creds or not creds.valid:
-        if creds and creds.expired and creds.refresh_token:
-            creds.refresh(Request())
-        else:
-            flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
-            # run_local_server ouvre le navigateur et attend la réponse
-            creds = flow.run_local_server(port=0)
-        
-        # Sauvegarde des credentials pour la prochaine fois
-        with open(token_file, 'w') as token:
-            token.write(creds.to_json())
-
+def exchange_code_for_token(code):
+    """Échange le code d'autorisation contre des credentials."""
+    client_secrets_file = 'client_secret.json'
+    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
+    flow.fetch_token(code=code)
+    creds = flow.credentials
+    with open('token.json', 'w') as token:
+        token.write(creds.to_json())
     return json.loads(creds.to_json())
 
 def is_google_connected():
