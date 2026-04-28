@@ -17,12 +17,12 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: '3.11'
+          python-version: '3.13'
 
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flet crewai crewai[tools] google-auth-oauthlib numpy dotenv
+          pip install -r requirements.txt
 
       - name: Create .env file
         run: |
