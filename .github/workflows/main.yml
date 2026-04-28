@@ -42,7 +42,10 @@ jobs:
         run: |
           # On décode le keystore depuis le secret base64
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
-          
+          # --- ÉTAPE MAGIQUE : Extraction du SHA-1 pour la console Google ---
+          echo "--- VOTRE SHA-1 POUR GOOGLE CONSOLE ---"
+          keytool -list -v -keystore release.jks -storepass "${{ secrets.KEYSTORE_PASSWORD }}" | grep "SHA1:"
+          echo "---------------------------------------"
           # Compilation avec signature
           yes | flet build apk
 
