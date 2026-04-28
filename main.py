@@ -33,7 +33,7 @@ def main(page: ft.Page):
     async def check_for_updates():
         try:
             # On interroge l'API GitHub pour obtenir la dernière release
-            repo = "TON_PSEUDO_GITHUB/TON_REPO" # À remplacer par ton repo
+            repo = "adr2801/Cortex-AI"
             url = f"https://api.github.com/repos/{repo}/releases/latest"
             response = requests.get(url).json()
             latest_version = response['tag_name'].replace('v', '')
@@ -49,6 +49,20 @@ def main(page: ft.Page):
             print(f"Erreur update: {e}")
 
     asyncio.create_task(check_for_updates())
+
+    # --- CAPTURE DU DEEP LINK ---
+    async def handle_deep_link():
+        if page.route and "code=" in page.route:
+            try:
+                code = page.route.split("code=")[1].split("&")[0]
+                await asyncio.to_thread(google_auth.exchange_code_for_token, code)
+                page.snack_bar = ft.SnackBar(ft.Text("Connexion Google réussie via Deep Link !"))
+                page.snack_bar.open = True
+                page.update()
+            except Exception as e:
+                print(f"Erreur Deep Link: {e}")
+
+    asyncio.create_task(handle_deep_link())
 
     # Veilleur pour le briefing automatique à 7h (pour la version Desktop)
     async def verifier_heure_briefing():
@@ -441,16 +455,46 @@ def main(page: ft.Page):
             page.update()
 
         async def connecter_google(e):
-            texte_statut_param.value = "Connexion à Google en cours... Veuillez vérifier votre navigateur."
-            page.update()
-            try:
-                # On lance l'authentification dans un thread pour ne pas bloquer l'UI
-                await asyncio.to_thread(google_auth.authenticate_google)
-                texte_statut_param.value = "Connecté avec succès à Google !"
-                btn_google.text = "Déconnecter Google"
-                btn_google.on_click = deconnecter_google
-            except Exception as ex:
-                texte_statut_param.value = f"Erreur Google : {str(ex)}"
+            # Fenêtre de dialogue pour l'authentification
+            async def handle_auth_dialog(e):
+                if not code_input.value:
+                    texte_auth_status.value = "Veuillez entrer le code."
+                    page.update()
+                    return
+                
+                try:
+                    await asyncio.to_thread(google_auth.exchange_code_for_token, code_input.value)
+                    texte_auth_status.value = "Connecté avec succès !"
+                    btn_google.text = "Déconnecter Google"
+                    btn_google.on_click = deconnecter_google
+                    await asyncio.sleep(2)
+                    dlg_auth.open = False
+                    page.update()
+                except Exception as ex:
+                    texte_auth_status.value = f"Code invalide : {str(ex)}"
+                    page.update()
+
+            code_input = ft.TextField(label="Code d'autorisation Google", password=False)
+            texte_auth_status = ft.Text("", size=12, color="orange400")
+            
+            dlg_auth = ft.AlertDialog(
+                title=ft.Text("Connexion Google"),
+                content=ft.Column([
+                    ft.Text("1. Cliquez sur le lien pour autoriser Jarvis :"),
+                    ft.TextButton("Ouvrir le navigateur", 
+                                 on_click=lambda _: page.launch_url(google_auth.get_authorization_url())),
+                    ft.Text("2. Copiez le code reçu et collez-le ci-dessous :"),
+                    code_input,
+                    texte_auth_status,
+                ], tight=True),
+                actions=[
+                    ft.TextButton("Annuler", on_click=lambda _: setattr(dlg_auth, 'open', False) or page.update()),
+                    ft.ElevatedButton("Valider", on_click=handle_auth_dialog),
+                ]
+            )
+            
+            page.dialog = dlg_auth
+            dlg_auth.open = True
             page.update()
 
         async def deconnecter_google(e):

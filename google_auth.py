@@ -1,21 +1,5 @@
 import os
 import json
-import sys
-from types import ModuleType
-
-# --- HACK POUR ANDROID : MOCKING WSGIREF COMPLET ---
-if "wsgiref" not in sys.modules:
-    # Création du module parent
-    wsgiref = ModuleType("wsgiref")
-    sys.modules["wsgiref"] = wsgiref
-    
-    # Création du sous-module simple_server
-    simple_server = ModuleType("wsgiref.simple_server")
-    # On ajoute une fonction factice make_server pour éviter les erreurs d'appel
-    simple_server.make_server = lambda host, port, request_handler=None: None
-    sys.modules["wsgiref.simple_server"] = simple_server
-# ----------------------------------------------------
-
 from google_auth_oauthlib.flow import InstalledAppFlow
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
@@ -29,32 +13,45 @@ SCOPES = [
     'https://www.googleapis.com/auth/drive.file'
 ]
 
+# L'URL de redirection doit correspondre exactement à celle configurée dans la console Google Cloud
+# Format : com.adr28.cortexia:/oauth2redirect
+REDIRECT_URI = "com.adr28.cortexia:/oauth2redirect"
+
 def get_authorization_url():
-    """Génère l'URL d'autorisation Google."""
+    """Génère l'URL d'autorisation Google pour Deep Linking."""
     client_secrets_file = 'client_secret.json'
     if not os.path.exists(client_secrets_file):
         raise FileNotFoundError("Le fichier 'client_secret.json' est manquant.")
     
-    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(
+        client_secrets_file, 
+        scopes=SCOPES, 
+        redirect_uri=REDIRECT_URI
+    )
     auth_url, _ = flow.authorization_url(prompt='consent', access_type='offline')
     return auth_url
 
 def exchange_code_for_token(code):
-    """Échange le code d'autorisation contre des credentials."""
+    """Échange le code reçu via le Deep Link contre des credentials."""
     client_secrets_file = 'client_secret.json'
-    flow = InstalledAppFlow.from_client_secrets_file(client_secrets_file, SCOPES)
+    flow = InstalledAppFlow.from_client_secrets_file(
+        client_secrets_file, 
+        scopes=SCOPES, 
+        redirect_uri=REDIRECT_URI
+    )
+    
     flow.fetch_token(code=code)
     creds = flow.credentials
+    
     with open('token.json', 'w') as token:
         token.write(creds.to_json())
+        
     return json.loads(creds.to_json())
 
 def is_google_connected():
-    """Vérifie si l'utilisateur est connecté à Google."""
     return os.path.exists('token.json')
 
 def disconnect_google():
-    """Déconnecte l'utilisateur en supprimant le token."""
     if os.path.exists('token.json'):
         os.remove('token.json')
     return True
