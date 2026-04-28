@@ -39,7 +39,7 @@ jobs:
           echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > release.jks
           
           # Compilation avec signature
-          flet build apk --version 1.0.2
+          flet build apk
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
